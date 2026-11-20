@@ -1,0 +1,163 @@
+CODE
+
+
+import math
+
+# Function to generate valid cluster sizes
+def valid_cluster_sizes(limit=20):
+    sizes = set()
+
+    for i in range(5):
+        for j in range(5):
+            N = i*i + i*j + j*j
+
+            if N > 0:
+                sizes.add(N)
+
+    return sorted(sizes)[:limit]
+
+
+# Function to calculate frequency reuse parameters
+def reuse_metrics(N, S=336, M=21, n=4.0):
+
+    # Channels per cell
+    k = S // N
+
+    # Co-channel reuse ratio
+    q = math.sqrt(3 * N)
+
+    # Signal-to-interference ratio
+    si_db = 10 * math.log10((q ** n) / 6)
+
+    # Total system capacity
+    capacity = M * k
+
+    return k, capacity, q, si_db
+
+
+# Main program
+S = 336
+M = 21
+n = 4.0
+req = 18.0
+
+print("FREQUENCY REUSE AND S/I CALCULATION")
+print("-----------------------------------")
+
+print("Total channels =", S)
+print("Number of cells =", M)
+print("Path loss exponent =", n)
+print("Required S/I =", req, "dB")
+
+print("\n")
+print("{:>3} {:>7} {:>9} {:>10} {:>11} {:>12}".format(
+    "N", "D/R", "Ch/Cell", "Capacity", "S/I (dB)", "Meets 18 dB"
+))
+
+print("-" * 60)
+
+best = None
+
+# Calculate for different cluster sizes
+for N in valid_cluster_sizes(10):
+
+    k, C, q, si = reuse_metrics(N, S, M, n)
+
+    if si >= req:
+        status = "YES"
+
+        if best is None:
+            best = N
+    else:
+        status = "NO"
+
+    print("{:3d} {:7.2f} {:9d} {:10d} {:11.2f} {:>12}".format(
+        N, q, k, C, si, status
+    ))
+
+print("-" * 60)
+
+print("\nSmallest cluster size that meets the")
+print("S/I requirement: N =", best)
+
+print("\nAMPS Comparison")
+print("----------------")
+print("AMPS cluster size = 7")
+print("Calculated minimum cluster size =", best)
+
+# Compare different S/I requirements
+print("\nS/I REQUIREMENT COMPARISON")
+print("--------------------------")
+
+for requirement in [18, 12, 9]:
+
+    minimum = None
+
+    for N in valid_cluster_sizes(10):
+
+        k, C, q, si = reuse_metrics(N, S, M, n)
+
+        if si >= requirement:
+            minimum = N
+            break
+
+    print("Required S/I:", requirement,
+          "dB  -> Smallest N:", minimum)
+
+# Compare different path loss exponents
+print("\nPATH LOSS EXPONENT COMPARISON")
+print("-----------------------------")
+
+for exponent in [3.0, 3.5, 4.0]:
+
+    k, C, q, si = reuse_metrics(7, S, M, exponent)
+
+    print("n =", exponent,
+          "| N = 7 | S/I =", round(si, 2), "dB")
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+OUTPUT
+
+FREQUENCY REUSE AND S/I CALCULATION
+-----------------------------------
+Total channels = 336
+Number of cells = 21
+Path loss exponent = 4.0
+Required S/I = 18.0 dB
+
+
+  N     D/R   Ch/Cell   Capacity    S/I (dB)  Meets 18 dB
+------------------------------------------------------------
+  1    1.73       336       7056        1.76           NO
+  3    3.00       112       2352       11.30           NO
+  4    3.46        84       1764       13.80           NO
+  7    4.58        48       1008       18.66          YES
+  9    5.20        37        777       20.85          YES
+ 12    6.00        28        588       23.34          YES
+ 13    6.24        25        525       24.04          YES
+ 16    6.93        21        441       25.84          YES
+ 19    7.55        17        357       27.34          YES
+ 21    7.94        16        336       28.21          YES
+------------------------------------------------------------
+
+Smallest cluster size that meets the
+S/I requirement: N = 7
+
+AMPS Comparison
+----------------
+AMPS cluster size = 7
+Calculated minimum cluster size = 7
+
+S/I REQUIREMENT COMPARISON
+--------------------------
+Required S/I: 18 dB  -> Smallest N: 7
+Required S/I: 12 dB  -> Smallest N: 4
+Required S/I: 9 dB   -> Smallest N: 3
+
+PATH LOSS EXPONENT COMPARISON
+-----------------------------
+n = 3.0 | N = 7 | S/I = 13.55 dB
+n = 3.5 | N = 7 | S/I = 16.11 dB
+n = 4.0 | N = 7 | S/I = 18.66 dB
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
