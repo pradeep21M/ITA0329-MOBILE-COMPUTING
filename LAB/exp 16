@@ -1,0 +1,114 @@
+CODE
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+import math
+
+# Function to calculate Free Space Path Loss
+def fspl_db(d_km, f_mhz):
+    return 32.44 + 20 * math.log10(d_km) + 20 * math.log10(f_mhz)
+
+# Function to calculate Received Power
+def rx_power_dbm(pt, gt, gr, d_km, f_mhz):
+    loss = fspl_db(d_km, f_mhz)
+    return pt + gt + gr - loss
+
+# Input parameters
+f = 2400.0       # Frequency in MHz
+pt = 20.0        # Transmit power in dBm
+gt = 2.0         # Transmitter antenna gain in dBi
+gr = 2.0         # Receiver antenna gain in dBi
+sens = -90.0     # Receiver sensitivity in dBm
+
+# Display parameters
+print("FREE SPACE PATH LOSS AND RECEIVED POWER")
+print("---------------------------------------")
+print("Frequency:", f, "MHz")
+print("Transmit Power:", pt, "dBm")
+print("Transmitter Gain:", gt, "dBi")
+print("Receiver Gain:", gr, "dBi")
+print("Receiver Sensitivity:", sens, "dBm")
+
+# Calculate for different distances
+distances = [0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10]
+
+print("\nDistance  FSPL(dB)  Received(dBm)  Received(W)  Link")
+print("----------------------------------------------------")
+
+for d in distances:
+    loss = fspl_db(d, f)
+    pr = rx_power_dbm(pt, gt, gr, d, f)
+
+    watts = 10 ** ((pr - 30) / 10)
+
+    if pr >= sens:
+        status = "OK"
+    else:
+        status = "FAIL"
+
+    print(f"{d:8.2f} {loss:9.2f} {pr:13.2f} "
+          f"{watts:12.3e} {status}")
+
+# Calculate maximum communication range
+allowed_loss = pt + gt + gr - sens
+
+d_max = 10 ** (
+    (allowed_loss - 32.44 - 20 * math.log10(f)) / 20
+)
+
+print("\nMaximum Communication Range")
+print("----------------------------")
+print("Allowed Path Loss:", round(allowed_loss, 2), "dB")
+print("Maximum Range:", round(d_max, 2), "km")
+
+# Effect of frequency at 1 km
+print("\nFREQUENCY COMPARISON AT 1 KM")
+print("----------------------------")
+
+frequencies = [900, 1800, 2400, 3500]
+
+for freq in frequencies:
+    loss = fspl_db(1, freq)
+    power = rx_power_dbm(pt, gt, gr, 1, freq)
+
+    print(f"{freq:5d} MHz : FSPL = {loss:6.2f} dB, "
+          f"Received Power = {power:7.2f} dBm")
+
+# Effect of doubling distance
+print("\nEffect of Doubling Distance")
+difference = fspl_db(2, f) - fspl_db(1, f)
+print("Additional Path Loss:", round(difference, 2), "dB")
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+OUTPUT
+FREE SPACE PATH LOSS AND RECEIVED POWER
+---------------------------------------
+Frequency: 2400.0 MHz
+Transmit Power: 20.0 dBm
+Transmitter Gain: 2.0 dBi
+Receiver Gain: 2.0 dBi
+Receiver Sensitivity: -90.0 dBm
+
+Distance  FSPL(dB)  Received(dBm)  Received(W)  Link
+----------------------------------------------------
+    0.01     60.04        -36.04    2.486e-07 OK
+    0.05     74.02        -50.02    9.946e-09 OK
+    0.10     80.04        -56.04    2.486e-09 OK
+    0.50     94.02        -70.02    9.946e-11 OK
+    1.00    100.04        -76.04    2.486e-11 OK
+    2.00    106.06        -82.06    6.216e-12 OK
+    5.00    114.02        -90.02    9.946e-13 FAIL
+   10.00    120.04        -96.04    2.486e-13 FAIL
+
+Maximum Communication Range
+----------------------------
+Allowed Path Loss: 114.0 dB
+Maximum Range: 5.0 km
+
+FREQUENCY COMPARISON AT 1 KM
+----------------------------
+  900 MHz : FSPL =  91.52 dB, Received Power = -67.52 dBm
+ 1800 MHz : FSPL =  97.55 dB, Received Power = -73.55 dBm
+ 2400 MHz : FSPL = 100.04 dB, Received Power = -76.04 dBm
+ 3500 MHz : FSPL = 103.32 dB, Received Power = -79.32 dBm
+
+Effect of Doubling Distance
+Additional Path Loss: 6.02 dB
