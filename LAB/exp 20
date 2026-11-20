@@ -1,0 +1,130 @@
+CODE
+
+
+import numpy as np
+
+# Function to generate Walsh-Hadamard matrix
+def walsh(n):
+    H = np.array([[1]])
+
+    while H.shape[0] < n:
+        H = np.block([
+            [H, H],
+            [H, -H]
+        ])
+
+    return H
+
+
+# Main program
+rng = np.random.default_rng(11)
+
+N = 8
+users = 3
+nbits = 6
+
+# Generate Walsh codes
+codes = walsh(N)[:users]
+
+print("CDMA SPREADING AND DESPREADING")
+print("--------------------------------")
+
+print("\nWalsh codes (chips):")
+print(codes)
+
+# Calculate correlation matrix
+print("\nCode correlation matrix / N:")
+print((codes @ codes.T) // N)
+
+# Generate random data bits (+1 and -1)
+bits = rng.integers(0, 2, (users, nbits)) * 2 - 1
+
+print("\nOriginal Data Bits:")
+for u in range(users):
+    print("User", u + 1, ":", bits[u])
+
+# Spreading operation
+tx = np.array([
+    np.kron(bits[u], codes[u])
+    for u in range(users)
+])
+
+# Combine all user signals
+channel = tx.sum(axis=0)
+
+print("\nCombined Channel Signal:")
+print(channel)
+
+# Add noise and perform despreading
+for sigma in (0.0, 1.0, 2.0):
+
+    rx = channel + rng.normal(0, sigma, channel.shape)
+
+    # Despreading operation
+    chips = rx.reshape(nbits, N)
+
+    est = np.sign(chips @ codes.T / N).T
+
+    # Count bit errors
+    errors = int((est != bits).sum())
+
+    print("\nNoise sigma =", sigma)
+    print("Bit errors =", errors, "of", users * nbits)
+
+# Display transmitted and received data
+print("\nSent User 1:")
+print(bits[0])
+
+print("\nReceived User 1:")
+print(est[0].astype(int), "(last run, sigma = 2.0)")
+
+# Test wrong Walsh code
+rx0 = channel.reshape(nbits, N)
+
+wrong_code = np.sign(
+    rx0 @ walsh(N)[7] / N
+).astype(int)
+
+print("\nWrong code (user 4 = Walsh row 7):")
+print(wrong_code)
+
+print("\nCDMA Simulation Completed Successfully")
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+OUTPUT
+
+CDMA SPREADING AND DESPREADING
+--------------------------------
+
+Walsh codes (chips):
+[[ 1  1  1  1  1  1  1  1]
+ [ 1 -1  1 -1  1 -1  1 -1]
+ [ 1  1 -1 -1  1  1 -1 -1]]
+
+Code correlation matrix / N:
+[[1 0 0]
+ [0 1 0]
+ [0 0 1]]
+
+Noise sigma = 0.0
+Bit errors = 0 of 18
+
+Noise sigma = 1.0
+Bit errors = 0 of 18
+
+Noise sigma = 2.0
+Bit errors = 1 of 18
+
+Sent User 1:
+[-1 -1  1 -1  1  1]
+
+Received User 1:
+[-1 -1  1 -1  1  1] (last run, sigma = 2.0)
+
+Wrong code (user 4 = Walsh row 7):
+[0 0 0 0 0 0]
+
+CDMA Simulation Completed Successfully
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
