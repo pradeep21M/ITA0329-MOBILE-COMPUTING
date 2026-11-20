@@ -1,0 +1,127 @@
+CODE
+
+
+import numpy as np
+
+# Network parameters
+D = 1000.0       # Distance between base stations (m)
+P0 = -30.0       # Reference power (dBm)
+n = 3.5          # Path loss exponent
+SIGMA = 4.0      # Shadowing standard deviation (dB)
+V = 10.0         # Mobile station speed (m/s)
+
+
+# Function to simulate handoff
+def run(H, rng, step=0.5):
+
+    serving = 0
+    handoffs = 0
+    pingpong = 0
+    last_t = -99
+    last_from = None
+    first_pos = None
+
+    # Mobile station movement
+    for t in np.arange(0, D / V, step):
+
+        x = V * t
+
+        # Calculate received signal strength
+        p = [
+            P0 - 10 * n * np.log10(max(abs(x - bx), 1))
+            + rng.normal(0, SIGMA)
+            for bx in (0, D)
+        ]
+
+        # Find neighbouring base station
+        new = 1 - serving
+
+        # Handoff decision using hysteresis
+        if p[new] > p[serving] + H:
+
+            # Check ping-pong handoff
+            if last_from == new and t - last_t < 10:
+                pingpong += 1
+
+            handoffs += 1
+
+            # Update serving base station
+            last_from = serving
+            last_t = t
+            serving = new
+
+            # Store first handoff position
+            if first_pos is None:
+                first_pos = x
+
+    return handoffs, pingpong, first_pos
+
+
+# Main program
+rng = np.random.default_rng(1)
+
+runs = 300
+
+print("HANDOFF SIMULATION WITH HYSTERESIS")
+print("----------------------------------")
+
+print("Distance between base stations:", D, "m")
+print("Mobile speed:", V, "m/s")
+print("Path loss exponent:", n)
+print("Shadowing standard deviation:", SIGMA, "dB")
+print("Number of simulation runs:", runs)
+
+print("\n")
+print(
+    f"{'H (dB)':>7} "
+    f"{'Handoffs':>10} "
+    f"{'Ping-pong':>12} "
+    f"{'First handoff (m)':>19}"
+)
+
+print("-" * 55)
+
+# Simulate different hysteresis margins
+for H in (0, 2, 4, 6, 8, 10):
+
+    results = [run(H, rng) for _ in range(runs)]
+
+    # Calculate average values
+    ho = np.mean([r[0] for r in results])
+    pp = np.mean([r[1] for r in results])
+
+    positions = [r[2] for r in results if r[2] is not None]
+
+    pos = np.mean(positions) if positions else float("nan")
+
+    print(
+        f"{H:7d} "
+        f"{ho:10.2f} "
+        f"{pp:12.2f} "
+        f"{pos:19.0f}"
+    )
+
+print("-" * 55)
+
+print("\nSIMULATION COMPLETED SUCCESSFULLY")
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+OUTPUT
+
+HANDOFF SIMULATION WITH HYSTERESIS
+----------------------------------
+
+H (dB)   Handoffs    Ping-pong    First handoff (m)
+-------------------------------------------------------
+     0      20.45        19.33                  374
+     2      12.57        11.45                  407
+     4       7.39         6.27                  435
+     6       4.09         2.98                  464
+     8       2.33         1.21                  496
+    10       1.39         0.36                  530
+-------------------------------------------------------
+
+SIMULATION COMPLETED SUCCESSFULLY
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
