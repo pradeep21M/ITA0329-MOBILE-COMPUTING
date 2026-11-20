@@ -1,0 +1,164 @@
+CODE
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Experiment 18: Erlang B Formula
+
+# Function to calculate blocking probability
+def erlang_b(E, C):
+    """Calculate Erlang B blocking probability."""
+    b = 1.0
+
+    for m in range(1, C + 1):
+        b = (E * b) / (m + E * b)
+
+    return b
+
+
+# Function to calculate required channels
+def channels_needed(E, gos):
+    C = 1
+
+    while erlang_b(E, C) > gos:
+        C += 1
+
+    return C
+
+
+# Function to calculate maximum traffic load
+def max_load(C, gos, hi=500.0):
+    lo = 0.0
+
+    for _ in range(60):
+        mid = (lo + hi) / 2
+
+        if erlang_b(mid, C) < gos:
+            lo = mid
+        else:
+            hi = mid
+
+    return lo
+
+
+# Main program
+print("CALL BLOCKING PROBABILITY USING ERLANG B")
+print("-----------------------------------------")
+
+# Different traffic loads
+loads = (2, 5, 10, 20)
+
+print("\nBlocking Probability B(E, C)")
+print("{:>5}".format("C"), end="")
+
+for E in loads:
+    print("{:>10}".format("E=" + str(E)), end="")
+
+print()
+print("-" * 45)
+
+# Calculate blocking probability
+for C in (5, 10, 20, 30):
+    print("{:5d}".format(C), end="")
+
+    for E in loads:
+        B = erlang_b(E, C)
+        print("{:10.4f}".format(B), end="")
+
+    print()
+
+
+# Offered traffic calculation
+users = 2000
+calls_per_hour = 1.5
+hold_time = 120
+
+E = users * calls_per_hour * hold_time / 3600
+
+print("\nOFFERED TRAFFIC CALCULATION")
+print("---------------------------")
+
+print("Number of users:", users)
+print("Calls per hour:", calls_per_hour)
+print("Average call duration:", hold_time, "seconds")
+print("Offered traffic:", round(E, 1), "Erlang")
+
+
+# Calculate channels for different GOS
+print("\nCHANNELS REQUIRED FOR DIFFERENT GOS")
+print("-----------------------------------")
+
+for gos in (0.05, 0.02, 0.01):
+    C = channels_needed(E, gos)
+
+    print("GOS:", "{:.0%}".format(gos),
+          "| Channels needed:", C)
+
+
+# Maximum load for 20 channels
+print("\nMAXIMUM TRAFFIC LOAD")
+print("--------------------")
+
+maximum = max_load(20, 0.02)
+
+print("Number of channels: 20")
+print("Target GOS: 2%")
+print("Maximum traffic load:", round(maximum, 2), "Erlang")
+
+
+# Trunking efficiency comparison
+print("\nTRUNKING EFFICIENCY COMPARISON")
+print("------------------------------")
+
+total_load = 20.0
+
+# One group of 30 channels
+single_group = erlang_b(total_load, 30)
+
+# Three groups of 10 channels
+three_groups = erlang_b(total_load / 3, 10)
+
+print("One group (30 channels):",
+      round(single_group, 4))
+
+print("Three groups (10 channels each):",
+      round(three_groups, 4))
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+OUTPUT
+
+CALL BLOCKING PROBABILITY USING ERLANG B
+-----------------------------------------
+
+Blocking Probability B(E, C)
+    C       E=2       E=5      E=10      E=20
+---------------------------------------------
+    5    0.0367    0.2849    0.5640    0.7644
+   10    0.0000    0.0184    0.2146    0.5380
+   20    0.0000    0.0000    0.0019    0.1589
+   30    0.0000    0.0000    0.0000    0.0085
+
+OFFERED TRAFFIC CALCULATION
+---------------------------
+Number of users: 2000
+Calls per hour: 1.5
+Average call duration: 120 seconds
+Offered traffic: 100.0 Erlang
+
+CHANNELS REQUIRED FOR DIFFERENT GOS
+-----------------------------------
+GOS: 5% | Channels needed: 105
+GOS: 2% | Channels needed: 113
+GOS: 1% | Channels needed: 117
+
+MAXIMUM TRAFFIC LOAD
+--------------------
+Number of channels: 20
+Target GOS: 2%
+Maximum traffic load: 13.18 Erlang
+
+TRUNKING EFFICIENCY COMPARISON
+------------------------------
+One group (30 channels): 0.0085
+Three groups (10 channels each): 0.2146
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
